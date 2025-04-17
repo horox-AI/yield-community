@@ -25,28 +25,17 @@ export default function Hero() {
               {/* Copy */}
               <div className="md:pr-32">
                 <h1 className="h2 font-aspekta bg-clip-text text-transparent bg-gradient-to-tr from-indigo-500 via-sky-300 to-slate-200 pb-6">
-                  A community of makers that learn and grow together
+                  A community of property makers that learn and grow together
                 </h1>
                 <p className="text-lg text-slate-400 mb-8">
-                  Our landing page template works on all devices, so you only have to set it up once, and get beautiful results forever.
+                A trusted space for those learning by doing — builders, investors, buyers — all here to grow together.
                 </p>
               </div>
               {/* Logos */}
               <div className="md:flex flex-wrap items-center md:space-x-5 text-center">
                 {/* Label */}
                 <div className="mb-4 md:mb-0">
-                  <div className="text-sm italic text-slate-500 whitespace-nowrap">Catch up with founders from</div>
-                </div>
-                <div className="inline-flex flex-wrap items-center">
-                  <div className="py-2 px-3">
-                    <Image src={Client01} alt="Client 01" />
-                  </div>
-                  <div className="py-2 px-3">
-                    <Image src={Client02} alt="Client 02" />
-                  </div>
-                  <div className="py-2 px-3">
-                    <Image src={Client03} alt="Client 03" />
-                  </div>
+             
                 </div>
               </div>
 
