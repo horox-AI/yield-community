@@ -14,30 +14,35 @@ export default function UserInfo() {
   const [letterAvatarColor, setLetterAvatarColor] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    if (session?.user?.image) {
-      // Check if it's a letter avatar format
-      if (session.user.image.startsWith('letter-avatar:')) {
+    console.log('Current session:', session?.user);
+    
+    if (!session?.user?.email) {
+      console.log('No session or email found, using fallback image');
+      setImageSrc(fallbackImage.src);
+      setUseLetterAvatar(false);
+      return;
+    }
+
+    if (session.user.image) {
+      console.log('User image found:', session.user.image);
+      const letterAvatarMatch = session.user.image.match(/(?:\/images\/)?letter-avatar:([^:]+):(.+)/);
+      
+      if (letterAvatarMatch) {
+        console.log('Letter avatar detected');
         setUseLetterAvatar(true);
         
-        // Parse the letter avatar format (letter-avatar:INITIALS:COLOR)
-        const parts = session.user.image.substring('letter-avatar:'.length).split(':');
+        const [, initials, color] = letterAvatarMatch;
+        console.log('Parsed - Initials:', initials, 'Color:', color);
         
-        if (parts.length >= 2) {
-          // New format with initials and color
-          setLetterAvatarName(parts[0]);
-          setLetterAvatarColor(parts[1]);
-        } else {
-          // Old format with just the name
-          setLetterAvatarName(parts[0]);
-          setLetterAvatarColor(undefined);
-        }
+        setLetterAvatarName(initials);
+        setLetterAvatarColor(color);
       } else {
-        // Regular image
+        console.log('Using regular session image');
         setUseLetterAvatar(false);
         setImageSrc(session.user.image);
       }
-    } else if (session?.user?.email) {
-      // If no Google image, try to fetch user-uploaded image
+    } else {
+      console.log('No session image, attempting to fetch from database');
       fetch(`/api/get-image?email=${session.user.email}`)
         .then(res => {
           if (res.ok) {
@@ -48,6 +53,7 @@ export default function UserInfo() {
         })
         .then(blob => {
           const url = URL.createObjectURL(blob);
+          console.log('Successfully fetched image from database');
           setImageSrc(url);
           setUseLetterAvatar(false);
         })
@@ -56,38 +62,33 @@ export default function UserInfo() {
           setImageSrc(fallbackImage.src);
           setUseLetterAvatar(false);
         });
-    } else {
-      // If no session or email, use fallback image
-      setImageSrc(fallbackImage.src);
-      setUseLetterAvatar(false);
     }
   }, [session]);
 
+  const avatarSize = 40; // Base size for the avatar
+
   return (
-    <div className="p-0 flex flex-col gap-3 w-10 h-10 sm:w-6 sm:h-6 md:w-8 md:h-8 lg:w-10 lg:h-10">
-      <div className="relative w-full h-full">
-        <div className="absolute inset-0 rounded-full border-4 border-slate-400">
-          {useLetterAvatar ? (
+    <div className="p-0 flex items-center justify-center w-10 h-10 sm:w-6 sm:h-6 md:w-8 md:h-8 lg:w-10 lg:h-10">
+      <div className="relative w-full h-full flex items-center justify-center">
+        <div className="absolute inset-0 rounded-full border-4 border-slate-400" />
+        {useLetterAvatar ? (
+          <div className="relative z-10 w-full h-full flex items-center justify-center overflow-hidden rounded-full">
             <LetterAvatar 
               name={letterAvatarName} 
-              size={40} 
-              className="relative z-10"
+              size={avatarSize}
+              className="w-full h-full"
               predefinedColor={letterAvatarColor}
             />
-          ) : (
-            <Image
-              className="rounded-full object-cover relative z-10"
-              src={imageSrc}
-              alt="User profile picture"
-              width={40}
-              height={40}
-              onError={() => {
-                console.error("Error loading image, falling back to default");
-                setImageSrc(fallbackImage.src);
-              }}
-            />
-          )}
-        </div>
+          </div>
+        ) : (
+          <Image
+            className="rounded-full object-cover relative z-10"
+            src={imageSrc}
+            alt="User profile picture"
+            fill
+            sizes="(max-width: 640px) 24px, (max-width: 768px) 32px, 40px"
+          />
+        )}
       </div>
     </div>
   );

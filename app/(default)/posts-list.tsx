@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams, useRouter } from 'next/navigation';
 import SponsorImage from '@/public/images/sponsor.png';
+import LetterAvatar from '@/components/ui/LetterAvatar';
 
 type PostType = {
   id: string;
@@ -182,12 +183,31 @@ export default function PostsList() {
                 {post.commenters && post.commenters.length > 0 && (
                   <div className="shrink-0 flex -space-x-3 self-center justify-self-end mt-4 lg:mt-0">
                     {post.commenters.map((commenter, index) => {
-                      // Ensure the image path is properly formatted
+                      // Check if it's a letter avatar format
+                      const letterAvatarMatch = commenter.match(/letter-avatar:([^:]+):(.+)/);
+                      
+                      if (letterAvatarMatch) {
+                        const [, initial, color] = letterAvatarMatch;
+                        return (
+                          <div 
+                            key={index}
+                            className="relative w-6 h-6 rounded-full border-2 border-slate-900 box-content"
+                          >
+                            <LetterAvatar
+                              name={initial}
+                              size={24}
+                              predefinedColor={color}
+                              className="rounded-full"
+                            />
+                          </div>
+                        );
+                      }
+                      
+                      // Handle regular image paths
                       let imageSrc = commenter;
                       
                       // If it's a simple username like "user1", convert to a proper path
                       if (typeof commenter === 'string' && commenter.match(/^user\d+$/)) {
-                        // Use a placeholder image from a public service
                         imageSrc = `https://randomuser.me/api/portraits/men/${parseInt(commenter.replace('user', ''), 10)}.jpg`;
                       }
                       
