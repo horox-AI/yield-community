@@ -110,7 +110,7 @@ const experts = [
       }
     }
   ];
-  
+ 
 
 const ExpertCard = ({ expert }: { expert: { name: string, bio: string, img: string, stats: { rating: number, consultations: number } } }) => {
     return (

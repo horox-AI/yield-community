@@ -1,0 +1,128 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Community Next - Architecture & Forum Details
+
+This document provides an overview of the Community Next project's architecture, core features, API structure, and data models, focusing on the community forum functionality.
+
+## 1. Overall Architecture
+
+*   **Framework:** Next.js 14 using the **App Router**.
+*   **Language:** TypeScript
+*   **Styling:** Tailwind CSS with custom theme configurations (`tailwind.config.js`).
+*   **Database:** MongoDB accessed via Mongoose ODM (`mongoose`).
+*   **Authentication:** NextAuth.js (`next-auth`) for handling user sessions and authentication strategies.
+*   **Component Model:** Leverages both **Server Components** (default, for data fetching and rendering on the server) and **Client Components** (`"use client";` directive for interactivity, state, and browser APIs).
+
+## 2. Directory Structure Highlights
+
+*   **`app/`:** Core application directory containing routes, layouts, and pages.
+    *   **`layout.tsx`:** Root layout applying global styles, fonts, and providers (e.g., `AuthProvider`, `NextToploader`).
+    *   **`(default)/`:** Route group for main application pages accessible to all users (e.g., homepage, post lists, individual post views).
+        *   `page.tsx`: Homepage, likely assembling main components like `PostsList`, `Sidebar`, `RightBar`.
+        *   `posts-list.tsx`: Component responsible for fetching and displaying lists of posts, including pagination and search logic.
+        *   `posts/[id]/page.tsx`: Page for displaying a single post's details.
+        *   `create-post/page.tsx`: Page containing the form/editor for creating new posts.
+        *   `profile/[userId]/page.tsx`: User profile pages.
+    *   **`(auth)/`:** Route group for authentication-related pages (e.g., login, signup - structure not fully explored but assumed).
+    *   **`api/`:** Backend API endpoints implemented as Next.js Route Handlers.
+        *   `auth/[...nextauth]/route.ts`: Handles all NextAuth.js authentication routes.
+        *   `posts/`: Endpoints related to post operations (create, fetch, vote, etc.).
+        *   `profile/`: Endpoints for user profile data.
+        *   `upload-image/`: Endpoint for handling image uploads.
+*   **`components/`:** Shared, reusable React components (UI elements like buttons, avatars, modals, but also structural parts like `Sidebar`, `RightBar`, `Hero`).
+*   **`lib/`:** Primarily contains server-side utility functions, especially data fetching logic (e.g., `getPosts.ts`, `getPostById.ts`). Note: Some DB logic also resides in `utils/`.
+*   **`utils/`:** General utility functions.
+    *   **`config/database.ts`:** Contains the `dbConnect` function for establishing MongoDB connection using Mongoose.
+    *   **`models/`:** Defines Mongoose schemas and models.
+        *   `post.ts`: Defines the schema for posts.
+        *   `user.ts`: Defines the schema for users.
+        *   *(Potentially `comment.ts`, `vote.ts`)*
+*   **`public/`:** Static assets like images and fonts.
+*   **`middleware.ts`:** Next.js middleware for intercepting requests, potentially used for authentication checks or redirects before reaching page/API handlers.
+
+## 3. Core Community Forum Features
+
+*   **Posts:**
+    *   Creation: Users can create posts with title, content (rich text via React Quill), category, tags, and optional images.
+    *   Listing: Posts are displayed in lists (e.g., popular, newest, by category) with pagination.
+    *   Viewing: Dedicated page for viewing a single post and its details.
+    *   Voting: Users can upvote posts (likely stored per-user to prevent multiple votes).
+    *   Content Preview: List view shows a truncated preview of post content.
+    *   Drafts: Posts can be saved as drafts before publishing.
+*   **Comments:** Users can comment on posts (structure/API not fully explored but implied by `PostType`).
+*   **Users & Profiles:**
+    *   Authentication: Users register and log in.
+    *   Profiles: Users have profiles displaying their information and potentially their activity (posts, comments).
+    *   Avatars: User avatars are displayed (using uploaded images or potentially fallback like letter avatars).
+*   **Categories & Tags:** Posts are organized using categories and tags for filtering and discovery.
+*   **Search:** Users can search for posts based on keywords matching title, content, or author.
+*   **Sponsorship:** A mechanism exists to display sponsored content within the post list (`SponsorImage`).
+
+## 4. Data Models (Mongoose Schemas - inferred from `app/api/posts/create/route.ts`)
+
+*   **`Post` (`utils/models/post.ts`)**:
+    *   `title`: String (Required, MaxLength: 100)
+    *   `content`: String (Required, MinLength: 50)
+    *   `author`: String (User's name)
+    *   `authorEmail`: String (User's email, for relation/identification)
+    *   `authorImage`: String (URL to author's avatar)
+    *   `date`: String (Formatted date, e.g., "Jan 15")
+    *   `category`: String (Required)
+    *   `tags`: Array of Strings
+    *   `images`: Array of Strings (URLs to attached images)
+    *   `status`: String ('published', 'draft')
+    *   `votes`: Number (Count of upvotes - *assumed*)
+    *   `voters`: Array of User IDs/Emails (To track who voted - *assumed*)
+    *   `comments`: Array of Comment Objects/IDs (*assumed*)
+*   **`User` (`utils/models/user.ts`)**:
+    *   `name`: String
+    *   `email`: String (Unique, Indexed)
+    *   `password`: String (Hashed, via `bcryptjs`)
+    *   `image`: String (URL to avatar)
+    *   *(Other fields like `createdAt`, roles, etc. might exist)*
+*   **`Comment` (*Hypothetical*):**
+    *   `postId`: ObjectId (Ref 'Post')
+    *   `authorEmail`: String
+    *   `authorName`: String
+    *   `authorImage`: String
+    *   `content`: String
+    *   `date`: Date
+
+## 5. API Routes (`app/api/`)
+
+*   **Authentication (`/api/auth/*`)**: Handled by NextAuth.js. Provides endpoints for login, logout, session management, potentially OAuth callbacks.
+*   **Posts (`/api/posts/*`)**:
+    *   `POST /api/posts/create`: Creates a new post (requires authentication). Handles validation, associates author data from session, saves to DB.
+    *   `GET /api/posts/regular`, `/popular`, `/newest`: Fetches lists of posts based on different sorting/filtering criteria. Handles pagination.
+    *   `GET /api/posts/{postId}`: Fetches details for a single post (*assumed*).
+    *   `PUT /api/posts/{postId}/vote`: Handles upvoting/downvoting (*assumed*).
+    *   `GET /api/posts/drafts`: Fetches posts saved as drafts by the current user (*assumed*).
+*   **Profile (`/api/profile/*`)**: Endpoints for fetching and updating user profile data (*assumed*).
+*   **Image Upload (`/api/upload-image`, `/api/get-image`)**: Handles image uploads (likely to a storage service or local filesystem) and retrieval. Uses `formidable` for parsing multipart/form-data.
+*   **User Data (`/api/get-user-data`)**: Fetches specific data related to the logged-in user session.
+
+## 6. Data Flow Example (Creating a Post)
+
+1.  **Frontend (`app/(default)/create-post/page.tsx`):** User fills out the form (title, content, category, tags). The component (`"use client";`) manages form state.
+2.  **Submission:** On submit, the client-side code gathers form data and makes a `POST` request to `/api/posts/create` with the data in the request body.
+3.  **Middleware (`middleware.ts`):** The request might pass through middleware for initial checks (e.g., rate limiting, basic auth checks - *if configured*).
+4.  **API Route (`app/api/posts/create/route.ts`):**
+    *   The handler executes on the server.
+    *   It retrieves the user session using `getServerSession(authOptions)`.
+    *   If the user is not authenticated, it returns a 401 error.
+    *   It parses the JSON body from the request.
+    *   It validates the input data (title length, content length, required fields).
+    *   It connects to the database (`await dbConnect()`).
+    *   It creates a new `Post` model instance using the validated data and user information from the session.
+    *   It saves the new post document to MongoDB (`await newPost.save()`).
+    *   It returns a JSON response indicating success (or error) and potentially the created post data or a redirect URL.
+5.  **Frontend:** The client-side code receives the response. If successful, it might redirect the user (e.g., to the new post page or the homepage) or display a success message. If an error occurs, it displays an error message.
+
+## 7. State Management
+
+*   Primarily uses React's built-in hooks (`useState`, `useEffect`) within Client Components for UI state (e.g., form inputs, loading states, fetched data).
+*   Global state (like authentication status) is managed via React Context provided by `AuthProvider` (wrapping `next-auth/react`'s `SessionProvider`).
+*   Data fetching is handled both on the server (in Server Components/Route Handlers) and on the client (using `useEffect` in Client Components like `PostsList`). Consider libraries like SWR or React Query for more advanced client-side data fetching/caching if needed.

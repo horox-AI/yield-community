@@ -1,0 +1,122 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Community Next - Expert Advice Feature Documentation
+
+## 1. Overview
+
+The Expert Advice feature is designed to facilitate connections between users seeking specialized real estate advice and registered experts available on the platform. It provides a structured workflow for users to find experts, select a specific advice service (text answer, video reply, or live video call), securely process payments, and receive personalized guidance from their chosen expert.
+
+## 2. User Flow
+
+The interaction process for the Expert Advice feature follows these steps:
+
+1.  **Browse Experts:**
+    *   Users access an "Expert Directory" section.
+    *   Functionality includes searching and filtering experts based on criteria like specialty, rating, etc.
+    *   Users can view individual expert profiles, which display their biography, areas of expertise, pricing for different services, and potentially reviews or ratings.
+
+2.  **Select Service:**
+    *   On an expert's profile, the user chooses the desired service type:
+        *   **Text Answer:** A written response to their query.
+        *   **1-on-1 Call:** A live video consultation. User book call and initially they will use Zoom, teams ecc.. 
+    *   The user proceeds to checkout.
+
+3.  **Payment Process:**
+    *   The user is redirected to a secure Stripe Checkout page pre-filled with the selected service and expert details.
+    *   Payment must be successfully completed via Stripe to continue.
+
+4.  **Advice Request Creation:**
+    *   Upon successful payment confirmation (e.g., via Stripe webhooks or redirect confirmation), a new `Advice Request` document is created in the application's database.
+    *   This document links the user, the expert, and the specific service requested.
+    *   The initial status of the request is set to `Paid`.
+
+5.  **Expert Notification:**
+    *   The selected expert is notified about the new, paid advice request.
+    *   Initial implementation involves updating the expert's dedicated dashboard within the platform. (Future enhancements could include email or real-time notifications).
+
+6.  **Expert Response / Service Delivery:**
+    *   The expert accesses the request via their dashboard.
+    *   **Text/Video Answer:** The expert uses forms/tools within their dashboard to compose and submit the written text or upload/record the video response.
+    *   **1-on-1 Call:** The expert is responsible for contacting the user (using provided details, if applicable) or manually arranging the call session. (Future: Integration with scheduling tools).
+
+7.  **Completion:**
+    *   Once the expert submits the text/video answer or confirms the completion of the call, they update the status of the `Advice Request` in their dashboard to `Completed`.
+
+8.  **User Notification & Access:**
+    *   The user receives a notification (dashboard update initially) that their advice request is completed.
+    *   The user can then access the delivered advice (view text, download/view video, confirm call happened) through their own dashboard section listing their requests.
+
+## 3. Data Structures / Models
+
+*   **`ExpertProfile` (Likely extending or related to the standard `User` model):**
+    *   `userId`: ObjectId (Reference to the base User model)
+    *   `bio`: String (Expert's professional summary)
+    *   `specialties`: Array of Strings (e.g., ["Commercial Real Estate", "First-time Home Buying"])
+    *   `pricingInfo`: Object (Containing prices for different service types)
+        *   `textAnswer`: Number
+        *   `videoAnswer`: Number
+        *   `liveCall`: Number (Potentially per hour/session)
+    *   `servicesOffered`: Array of Strings (Enum: ['Text', 'Video', 'Call'])
+    *   *(Other fields: ratings, years of experience, location, profile picture)*
+*   **`AdviceRequest`:**
+    *   `requestId`: ObjectId (Unique identifier for the request)
+    *   `userId`: ObjectId (Reference to the User requesting advice)
+    *   `expertId`: ObjectId (Reference to the User who is the expert)
+    *   `serviceType`: String (Enum: 'Text', 'Video', 'Call')
+    *   `paymentStatus`: String (Enum: 'Pending', 'Paid', 'Failed', 'Refunded') - Initial status after successful checkout is 'Paid'.
+    *   `deliveryStatus`: String (Enum: 'Pending', 'InProgress', 'Completed', 'Overdue')
+    *   `requestDetails`: String (The user's initial question or topic)
+    *   `responseContent`: String (URL to video, text content, or confirmation of call)
+    *   `createdAt`: Date
+    *   `completedAt`: Date (Optional)
+    *   `paymentIntentId`: String (Stripe Payment Intent ID for reference)
+
+## 4. Architecture Components
+
+*   **Frontend (React/Next.js):**
+    *   **Expert Directory Page (`app/(default)/expert-directory/page.tsx` - *assumed path*):** Displays list of experts, includes search/filter controls. Uses client-side fetching/rendering (`"use client";`).
+    *   **Expert Profile Component (Modal or Separate Page):** Shows detailed expert information and service selection options.
+    *   **Checkout Flow:** Component(s) to initiate the Stripe Checkout session based on selected service. Handles redirection to Stripe and potential callback/success/cancel pages.
+    *   **User Dashboard:**
+        *   Requests List: Section showing the user's past and current advice requests (`"use client";`).
+        *   Request Details View: Displays the status and delivered content for a specific request.
+    *   **Expert Dashboard:**
+        *   Incoming Requests List: Displays `Paid` requests assigned to the expert (`"use client";`).
+        *   Delivery Form/Component: Interface for experts to submit text/video answers or mark calls as complete.
+
+*   **Backend (Next.js API Routes - `app/api/`):**
+    *   **Stripe Integration:**
+        *   API route to create Stripe Checkout Sessions (`/api/expert/create-checkout-session` - *example path*).
+        *   Webhook handler (`/api/webhooks/stripe` - *example path*) to listen for Stripe events (e.g., `checkout.session.completed`) to reliably update payment status and create the `AdviceRequest`.
+    *   **Advice Request API Routes (`/api/expert/requests/*` - *example path*):**
+        *   `POST /`: (Protected, triggered internally after payment confirmation) Creates a new `AdviceRequest`.
+        *   `GET /user`: Fetches requests for the currently logged-in user.
+        *   `GET /expert`: Fetches requests assigned to the currently logged-in expert.
+        *   `PUT /{requestId}/deliver`: (Protected, Expert only) Updates the request status to `Completed` and saves the `responseContent`.
+    *   **Expert Profile API Routes (`/api/expert/profiles/*` - *example path*):**
+        *   `GET /`: Fetches list of experts for the directory.
+        *   `GET /{expertId}`: Fetches details for a specific expert profile.
+        *   *(Potentially PUT/POST for experts to manage their own profiles)*.
+    *   **Notification System (Initial):** Backend logic updates database fields that dashboards poll or fetch on load. (Future: Could involve a dedicated notification model, WebSockets, or email service integration).
+    *   **Authorization Middleware:** Applied to relevant API routes (e.g., checking if the user has an 'expert' role before allowing access to expert-specific endpoints like request delivery).
+
+## 5. Business Logic Rules & Constraints
+
+*   **Payment Precedes Service:** An `AdviceRequest` document is only created (status `Paid`) *after* successful payment confirmation from Stripe.
+*   **Expert Access Control:** Experts can only view and act upon requests that are assigned to them and have a `Paid` status. They cannot see unpaid or pending requests via their primary dashboard interface.
+*   **Refund/Cancellation Policy:** Post-payment cancellations and refunds are not automatically handled by the system. These require manual intervention by an administrator.
+*   **Delivery Timeframe (Future Guideline):** A target delivery timeframe (e.g., 72 hours) should be communicated, although initial implementation may not strictly enforce it with automated actions.
+*   **Platform Commission:** The system must account for taking a platform fee from each transaction. This logic resides within the backend, potentially adjusting the amount recorded or during payout processing.
+
+## 6. Future Improvements / Considerations
+
+*   **Scheduling Integration:** Integrate with tools like Calendly or build a custom scheduling system for booking and managing 1-on-1 calls seamlessly.
+*   **Real-time Notifications:** Implement WebSockets or push notifications for instant updates to users and experts (e.g., new request, response submitted).
+*   **Real-time Chat:** Add a simple chat feature for quick clarifications between user and expert related to a specific request.
+*   **Admin Dashboard:** Develop a dedicated interface for administrators to manage experts, oversee requests, handle disputes, process manual refunds, and view analytics.
+*   **Automated Reminders:** Implement automated reminders for experts if requests approach the delivery timeframe limit.
+*   **Review & Rating System:** Allow users to rate and review experts after request completion.
+*   **Expert Application/Onboarding Flow:** Create a formal process for users to apply to become registered experts.

@@ -1,0 +1,97 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Community Next - Coding Style & Conventions
+
+This document outlines the coding style, conventions, and best practices to be followed when contributing to the Community Next project. Adhering to these guidelines ensures code consistency, readability, and maintainability.
+
+## 1. General Principles
+
+*   **Readability:** Write code that is easy for other developers (and your future self) to understand.
+*   **Consistency:** Follow the established patterns and conventions within the codebase.
+*   **Simplicity:** Prefer straightforward solutions over overly complex ones (KISS - Keep It Simple, Stupid).
+*   **DRY (Don't Repeat Yourself):** Avoid duplicating code; abstract common logic into reusable functions or components.
+
+## 2. Formatting
+
+*   **Tooling:** While explicit Prettier/ESLint config files are not present in the root, the project utilizes Next.js's built-in linting (`npm run lint`). Adhere to the formatting rules enforced by this tool.
+*   **Indentation:** Use **2 spaces** for indentation (common React/TypeScript standard).
+*   **Line Length:** Aim for a maximum line length of 100-120 characters where practical. Break down longer lines logically.
+*   **Semicolons:** Use semicolons at the end of statements.
+*   **Quotes:** Use single quotes (`'`) for strings unless double quotes (`"`) are necessary (e.g., within JSX attributes containing single quotes or for JSON compatibility).
+*   **Trailing Commas:** Use trailing commas where applicable (e.g., in multi-line object literals, array literals, function parameters).
+
+## 3. Naming Conventions
+
+*   **Components:** Use `PascalCase` for React components (both functional and class-based) and their filenames (e.g., `UserProfile.tsx`, `PostsList.tsx`).
+*   **Variables & Functions:** Use `camelCase` (e.g., `const userProfile = ...`, `function getUserData() {}`).
+*   **Constants:** Use `UPPER_SNAKE_CASE` for true constants (values that never change), especially if defined globally or at the top level of a module (e.g., `const MAX_POST_LENGTH = 10000;`). Use `camelCase` for constants derived from runtime values or props.
+*   **TypeScript Types/Interfaces:** Use `PascalCase` (e.g., `type PostType = {...}`, `interface UserSession {...}`).
+*   **Files:**
+    *   Components: `PascalCase.tsx` (e.g., `UserProfile.tsx`)
+    *   Hooks: `useCamelCase.ts` (e.g., `useFetchPosts.ts`)
+    *   Utilities/Helpers: `camelCase.ts` (e.g., `dateUtils.ts`)
+    *   API Routes (App Router): `route.ts` within named directories (e.g., `app/api/posts/create/route.ts`).
+    *   Pages (App Router): `page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`.
+*   **CSS Classes (Tailwind):** Use Tailwind's utility classes directly. For custom components requiring specific styling not achievable easily with utilities, consider CSS Modules or styled components if introduced later, following `camelCase` for class names within those modules.
+
+## 4. TypeScript Best Practices
+
+*   **Strong Typing:** Leverage TypeScript's type system. Avoid using `any` whenever possible. Define clear `interface` or `type` definitions for objects, props, and state.
+*   **Props:** Define explicit types or interfaces for component props.
+    ```typescript
+    interface PostCardProps {
+      post: PostType;
+      onVote: (postId: string) => void;
+    }
+
+    const PostCard: React.FC<PostCardProps> = ({ post, onVote }) => { ... };
+    ```
+*   **Return Types:** Explicitly define return types for functions, especially for utilities and API handlers.
+*   **Server/Client Components:** Clearly distinguish between Server Components and Client Components (`"use client";`). Understand the implications for data fetching, state, and event handling.
+*   **Non-null Assertion Operator (`!`):** Use sparingly and only when you are certain a value cannot be `null` or `undefined`. Prefer type guards or optional chaining (`?.`).
+*   **Readonly:** Use the `readonly` modifier for properties that should not be reassigned after object creation.
+
+## 5. React Best Practices
+
+*   **Functional Components & Hooks:** Prefer functional components with React Hooks (`useState`, `useEffect`, `useContext`, etc.) over class components.
+*   **Component Composition:** Build complex UIs by composing smaller, reusable components.
+*   **State Management:**
+    *   Use `useState` for simple component-local state.
+    *   Consider `useReducer` for more complex state logic within a component.
+    *   Use React Context (`useContext`) for sharing state across multiple components without prop drilling, particularly for global state like authentication or theme.
+    *   For more complex global state needs, consider libraries like Zustand or Jotai if Context becomes unwieldy (evaluate if needed).
+*   **Keys:** Always provide stable and unique `key` props when rendering lists of elements. Avoid using array indices as keys if the list can change order or have items added/removed.
+*   **`useEffect` Dependencies:** Ensure the `useEffect` dependency array is accurate to prevent infinite loops or stale data. Use the ESLint rule (`react-hooks/exhaustive-deps`) provided by `next lint`.
+*   **Memoization:** Use `React.memo`, `useCallback`, and `useMemo` judiciously to optimize performance, but only after identifying actual performance bottlenecks. Profile first.
+
+## 6. Commenting
+
+*   **Purpose:** Write comments to explain *why* code exists, not *what* it does (unless the 'what' is particularly complex or non-obvious). Good naming often makes the 'what' clear.
+*   **Complex Logic:** Comment complex algorithms, business logic, or workarounds.
+*   **TODOs:** Use `// TODO:` comments to mark areas needing future work or improvement. Include context if possible.
+*   **Documentation Comments (TSDoc/JSDoc):** Consider using TSDoc/JSDoc syntax for exported functions, components, and types to enable better editor intellisense and potentially auto-generated documentation.
+    ```typescript
+    /**
+     * Fetches a list of posts based on the provided criteria.
+     * @param category - The category to filter posts by (optional).
+     * @param page - The page number for pagination.
+     * @returns A promise resolving to an array of PostType objects.
+     */
+    async function fetchPosts(category?: string, page: number = 1): Promise<PostType[]> {
+      // ... implementation ...
+    }
+    ```
+
+## 7. Linting & Code Quality
+
+*   **Run Linter:** Regularly run `npm run lint` and fix any reported issues before committing code.
+*   **Code Reviews:** Participate in code reviews to catch potential issues and ensure adherence to guidelines.
+
+## 8. Error Handling
+
+*   **API Calls:** Use `try...catch` blocks for API calls (`fetch`, `axios`) and database operations.
+*   **User Feedback:** Provide clear feedback to the user in case of errors (e.g., toast notifications, inline error messages).
+*   **Logging:** Log errors on the server-side (using `console.error` or a dedicated logging library) for debugging.
